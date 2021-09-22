@@ -1,80 +1,481 @@
 FORMAT: 1A
-HOST: https://polls.apiblueprint.org/
+HOST: https://api.homecredit.cz
 
-# cspartner-future
+# Home Credit - Partner API - Future version
+API documentation for Home Credit API for partners (next release documentation).
 
-Polls is a simple API allowing consumers to view polls and vote in them.
+> Version of documentation: `1.2.1` (11/2021)
 
-## Questions Collection [/questions]
+| Version        | Release | Release date | News |
+| ---            | ---     | ---          | ---  |
+| 1.2.1 (11/2021) | CS86    | 8.11.2021    | New filter parameters for method [search application](#reference/application-resources/application-operations/search-application) |
+| 1.1.1 | CS82    | 13.7.2021    | Initial version |
 
-### List All Questions [GET]
+## Getting started
+This online document describes Home Credit (HC) API for partners - the means for partners through which they can get information about client contracts with Home Credit.
 
-+ Response 200 (application/json)
+| Group of services                                           | Purpose                                                                                                                                                      |
+| ---                                                         | ---                                                                                                                                                          |
+| [Security](#reference/security)                             | Security rules and principles                                                                                                                                |
+| [Application resources](#reference/application-resources)   | Resources that allows getting information about *application* during its whole life cycle                                                                                |
 
-        [
-            {
-                "question": "Favourite programming language?",
-                "published_at": "2015-08-05T08:40:51.620Z",
-                "choices": [
-                    {
-                        "choice": "Swift",
-                        "votes": 2048
-                    }, {
-                        "choice": "Python",
-                        "votes": 1024
-                    }, {
-                        "choice": "Objective-C",
-                        "votes": 512
-                    }, {
-                        "choice": "Ruby",
-                        "votes": 256
-                    }
-                ]
-            }
-        ]
+### Basic implementation
+This API is very simple, partner should implement only this:
+1. [Login](#reference/security/login-partner)
+    - Partner must be authorized to be able to access the most resources
+1. [Search application](#reference/application-resources/application-operations)
+    - Partner uses this resource for getting all necessary data
 
-### Create a New Question [POST]
+## Documentation principles
+- attributes in request/response object are optional unless stated otherwise (`required` flag under attribute name)
+- a required attribute in an optional object means, that if an optional object is specified, it must contain the required attribute.
+- all values in request/response attributes are just examples, except for enum values - these are the only possible values for the given attribute.
+- documentation adheres to [semantic versioning](https://semver.org/spec/v2.0.0.html), which makes a distinction between *major*, *minor*, and *patch* versions.
 
-You may create your own question using this action. It takes a JSON
-object containing a question and a collection of answers in the
-form of choices.
+### Naming conventions
+- we use camelCase for all object and attribute names
+- we use CAPITAL_UNDERSCORE for enum values
+- we use plural in resource names
 
-+ Request (application/json)
+### Key words used in this document (RFC 2119)
 
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and "OPTIONAL" in this document are to be interpreted as described in [RFC 2119](https://www.ietf.org/rfc/rfc2119.txt).
+
+## Home Credit REST API principles
+
+### Request restrictions
+Please, keep in mind following restrictions regarding requests:
+- Maximum request size is **10 MB**.
+- Maximum size of accepted single file is **500 kB**.
+- Here is the list of supported files:
+
+| MIME type                                                                 | Example(s)                 |
+| ---                                                                       | ---                        |
+| application/pdf                                                           | *.pdf                      |
+| application/vnd.openxmlformats-officedocument.spreadsheetml.sheet         | *.xlsx                     |
+| application/vnd.openxmlformats-officedocument.wordprocessingml.document   | *.docx                     |
+| application/vnd.openxmlformats-officedocument.presentationml.presentation | *.pptx                     |
+| application/vnd.ms-excel                                                  | *.xls, *.xlt, *.xla        |
+| application/msword                                                        | *.doc, *.dot               |
+| application/vnd.ms-powerpoint                                             | *.ppt, *.pot, *.pps, *.ppa |
+| plain/text                                                                | *.csv, *.txt               |
+| image/jpeg                                                                | *.jpg, *.jpeg              |
+| image/png                                                                 | *.png                      |
+| image/gif                                                                 | *.gif                      |
+
+
+### API calls limits
+When partner reaches API calls limit (calls the API more times than is his quota), HTTP error 429 is returned. To inform about limits we use following response headers:
+- `X-Rate-Limit-Limit` - The number of allowed requests in the current period
+- `X-Rate-Limit-Remaining` - The number of remaining requests in the current period
+- `X-Rate-Limit-Reset` - The number of seconds left in the current period
+
+### Versioning
+We use API version in URL (e.g. `https://api.homecredit.cz/customer/v1/my/profile`). *Minor* changes and *patches* (see below) that don't break backwards compatibility do NOT increase API version, e.g. they MAY happen without prior notice and your application should be ready to handle them.
+
+*Minor* changes include:
+- adding new resource
+- adding new optional header/URL parameter or optional body attribute to request
+- adding new attribute to response body
+- adding new error codes and messages, provided that error structure is the same
+
+### Response encoding
+Unless stated otherwise, all responses are sent as `Content-Type: application/json; charset=utf-8`
+
+### HTTP status codes
+We use following status codes throughout the API, except for OAuth flow when response codes are prescribed in RFC
+- 200 `OK` - request was successful
+- 201 `Created` - request was successful and resource was created
+- 202 `Accepted` - request has been accepted for processing, but the processing has not been completed
+- 204 `No Content` - we accepted partner's request but there is nothing to return (e.g. response is empty)
+- 400 `Bad Request` - syntax error, e.g. request is missing required parameters/attributes or parameter values are of incorrect type
+- 401 `Unauthorized` - partner is not authorized
+- 403 `Forbidden` - access denied (e.g. user / application is not allowed to use the resource)
+- 404 `Not Found` - resource could not be found
+- 405 `Method Not Allowed` - specified method is not allowed for resource
+- 422 `Unprocessable Entity` -  business (semantic) errors. Request is well-formed, but cannot be processed (e.g. payment due date is in past). Errors are specified in response body (see below)
+- 429 `Too Many Requests` - partner exceeded the rate limit (see section [API calls limit](#introduction/api-calls-limits) above)
+- 500 `Internal Server Error` - something went wrong on our side
+- 503 `Service Unavailable` - there is planned service outage
+
+### Error handling
+Besides HTTP status codes, which are the main indication if something goes wrong, we also use `errors` object to report more details about errors.
+
+Errors object example:
+```javascript
+{
+    ...
+
+    errors: [
         {
-            "question": "Favourite programming language?",
-            "choices": [
-                "Swift",
-                "Python",
-                "Objective-C",
-                "Ruby"
-            ]
+            "code": "ERR_100",
+            "message": "Invalid contract number",
+            "severity": "ERROR",
+            "attribute": "partyAccount.accountNumber",          // optional
+            "ticketId": "UAT1:AMS:20160516-091658.450:45e4" // optional
+        },
+        {
+            "code": 352,
+            "message": "Insufficiend funds for payment order realization",
+            "severity": "WARN"
+        },
+        {
+            "code": 523,
+            "message": "This order will trigger currency exchange operation",
+            "severity": "INFO"
         }
+    ]
+}
+```
 
-+ Response 201 (application/json)
+Error object attributes
+| Attribute name | Description                                                     |
+| ---            | ---                                                             |
+| code           | unique error code                                               |
+| message        | human readable error description (non-localized)                |
+| severity       | error severity (see below)                   |
+| attribute      | json path of request attribute that caused the error (optional) |
+| ticketId       | internal ticket ID, used for error backtracking                 |
 
-    + Headers
+There are 3 levels of error severity:
+- `ERROR` - critical error, execution cannot continue. This MUST be indicated also by appropriate HTTP status code (e.g. `422 Unprocessable Entity`)
+- `WARN` - non-critical error, execution can continue but further user interaction is advisable (for request to proceed, partner MUST specify this error code in `override` request attribute). This MIGHT be indicated also by appropriate HTTP status code.
+- `INFO` - information only, execution can continue without user interaction.
 
-            Location: /questions/2
+#### Errors overview
+| Status code | Code                  | Explanation                                                                     | Message                                                                                                        |
+| ---         | ---                   | ---                                                                             | ---                                                                                                            |
+| 400         | INVALID_REQUEST       | Request was not well formatted (malformed request syntax, size too large, etc.) | (*Various messages possible*) e.g. Unsupported combination of application state and order state                  |
+| 404         | OBJECT_NOT_FOUND      | The requested resource could not be found                                       | (*Various messages possible*) e.g. Specified object was not found                                              |
+| 422         | NOT_ALLOWED           | Operation is not allowed (internal reason)                                      | (*Various messages possible*) e.g. Not allowed (other reason)                                                    |
+| 500         | INTERNAL_SERVER_ERROR | Unexpected condition was encountered and no more specific message is suitable   | (*Various messages possible*) e.g. Failed to parse given JSON                                                  |
 
-    + Body
+### Formats
+- **date** and **time** uses [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatting, e.g.:
+  - date is represented as `YYYY-mm-dd`. Timezone (local) is added when necessary.
+  - time is represented as `Thh:mm:ss`. Timezone is added when necessary. Time with arbitrary number of digits respresenting miliseconds is also accepted (when [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format criteria is met) but the time without miliseconds is always returned.
+  - day of week is represented as number 1..7, with 1 being Monday
+  - week no. 1 is the week with the year's first Thursday in it
+- **phone numbers** uses international mobile phone number format starting with '+' and including country code (example of valid number: `+420739111222`)
+- **numbers format** number format is defined by [JSON standard](http://www.json.org), e.g. decimals are separated by `.`
+- **money format** uses [ISO 4217](https://en.wikipedia.org/wiki/ISO_4217) formatting (in minor units, e.g.: 12590 in minor units represents 125,90 CZK/EUR)
 
-            {
-                "question": "Favourite programming language?",
-                "published_at": "2015-08-05T08:40:51.620Z",
-                "choices": [
-                    {
-                        "choice": "Swift",
-                        "votes": 0
-                    }, {
-                        "choice": "Python",
-                        "votes": 0
-                    }, {
-                        "choice": "Objective-C",
-                        "votes": 0
-                    }, {
-                        "choice": "Ruby",
-                        "votes": 0
-                    }
-                ]
-            }
+<!--
+## Partial update
+We support partial update using PATCH method. Use JSON Merge Patch according to [RFC-7386](https://tools.ietf.org/html/rfc7386).
+-->
+
+
+# Group Security
+To access our API, partner have to obtain *access token* first; this token is a string of arbitrary length (30+ chars) and it has to be included in HTTP header to every request to API. This section describes way to obtain valid access token and use it to access protected resources.
+
+- to obtain access token, use `/authentication/v2/partner` resource with appropriate parameters (see the [`/authentication/v2/partner` resource documentation](#reference/security/login-partner))
+
+- access token should be present in every request using request header `Authorization`, with type `Bearer`. If access token has value `secret_token`, it should be specified as follows:
+
+`Authorization: Bearer secret_token`
+
+So the real example using curl will look like:
+
+```
+curl -H "Authorization: Bearer secret_token" https://api.homecredit.cz/partner/v1/applications
+```
+
+- access token has limited time validity (for 2 hours). After it is expired, partner has to obtain new one using `/authentication/v2/partner` resource.
+
+- if partner fails to specify access token `401 Unauthorized` error and following response body is returned:
+
+```
+{
+   "error_description": "The access token is missing",
+   "error": "invalid_request"
+}
+```
+
+- if partner provides invalid access token `401 Unauthorized` error and following response body is returned:
+
+```
+{
+    "error_description":"The access token is invalid or has expired",
+    "error":"invalid_token"
+}
+```
+
+> **IMPORTANT NOTE:** Partner must keep his access token and login credentials safe. Login credentials nor access token should NEVER be put into client page. If partner plans to integrate API calls in client flow without submitting the page to server, he should implement REST endpoint bound to his shopping basket session, that will be used as a proxy to call HC API.
+
+> NEVER transfer access token nor login credentials over plain HTTP. Such requests will be refused.
+
+## Login partner [/authentication/v2/partner]
+Partner authenticate himself and obtain acces token with this resource.
+
+> **IMPORTANT NOTE:** Credentials for `/authentication/v1/partner` and  `/authentication/v2/partner` are not the same!
+
+### Login partner [POST]
+
++ Request (application/json; charset=utf-8)
+    + Attributes (PartnerLogin)
+
+
++ Response 200(application/json; charset=utf-8)
+
+        Partner acces token issued
+
+    + Attributes (PartnerLoginResult)
+
+
++ Response 400(application/json; charset=utf-8)
+
+        Unable to authenticate partner
+
+    + Attributes (Errors)
+
+# Group Application resources
+
+## Application operations [/partner/v1/applications{?applicationId,contractNumber}]
+Partner may use resource `/partner/v1/applications` to check the state of partner's application and getting detailed information about it. Partner needs any identifier of application, either technical identifier of application (`applicationId` which is in the form of UUID), human readable identifier of application (`customerKey`) or identifier of contract (human readable `contractNumber`). In case partner is not sure which attribute to use (typically in face to face process with client who may not know which type of identifier he has), he should use `applicationKey` which searches through multiple attributes at once.
+
+If the request was successfully processed, partner receives HTTP status code 200. If specified application was not found, empty data are returned.
+
+In other cases, partner receives one of the following errors:
+  | Status code | Code                  | Explanation                                                                      |
+  | ---         | ---                   | ---                                                                              |
+
+  | 400         | INVALID_REQUEST       | Request was not well formatted (malformed request syntax, size too large, etc.)  |
+  | 500         | INTERNAL_SERVER_ERROR | Unexpected condition was encountered and no more specific message is suitable    |
+
+
+### Search applications [GET]
++ Parameters
+  + applicationId: `11200a0ee-adf54-dsa` (string, optional) - Primary identifier of the application.
+  + contractNumber: `4106554400` (string, optional) - Identifier of the contract. Used when the partner does not have the application identifier.
+  + customerKey: `4566554400` (string, optional) - Human readable identifier of application, typically used in communication with clients.
+  + applicationKey: `4106554400` (string, optional) - Filter attribute to search through multiple (human readable) attributes at once. Actually it search using attributes `contractNumber`, `customerKey` and `orderNumber`. Searching with this attibute may take longer a may (in an extremely rare case) return more than one application.
+
++ Request Valid (application/json;charset=UTF-8)
+
++ Response 200(application/json;charset=UTF-8)
+
+    + Attributes (SearchApplicationResponse)
+
++ Response 400(application/json;charset=UTF-8)
+
+    + Attributes (Errors)
+
+# Data Structures
+
+## SearchApplicationResponse
++ data (array[Application], fixed-type, required) - Collection of found applications. If no application was found, data contains empty array
+
+## ApplicationBase (object)
+Financing application base information
+
+### Properties
++ `id`: `11200a0ee-adf54-dsa` (string, required) - Unique identifier in Home Credit
++ `customerKey`: `4566554400` (string, optional) - Human readable identifier of application, typically used in communication with clients.
++ `status`: `CREATED` (enum, required) - Application state.
+    + `CREATED` - Application process has not started yet
+    + `PRESCORED` - Preliminary approved
+    + `APPROVED` - Application is approved, contract signature process is in progress
+    + `VERIFICATION` - Manual review of application by Home Credit employee is in progress
+    + `ALTERNATIVE` - Alternative offered to client
+    + `CONFIRMED` - Signed by client, contract finalization by Home Credit employee is in progress
+    + `REJECTED`
+    + `CANCELLED`
++ workflowSteps (array[WorkflowStep], fixed-type, optional) - Collection of application process actions available for current application state.
+
+## Application (ApplicationBase)
++ applicationCustomer (ApplicationCustomerBase, optional) - Customer information
++ financedSubject (FinancedSubjectMinimal, required) - Subject of financing (for example Iphone purchase...)
++ contract (Contract, optional) - Information about contract originating from this application
++ originationContext (OriginationContext, required) - Additional information about context of application origination
++ services (array[Service], fixed-type, optional) - Additional services agreed for the application (for example insurance)
+
+## ApplicationCustomerBase (object)
++ `firstName`: `John` (string, required) -  Customer first (given) name.
++ `lastName`: `Newborn` (string, required) - Customer last (family) name.
++ `email`: `john.newborn@country.com` (string, optional) - E-mail address of customer.
++ `phone`: `+420777123456` (string, optional) - Phone number with country code (including leading `+`)
++ `addresses` (array[Address], fixed-type, optional) - Addresses.
+
+## Address(object)
++ `streetAddress`: `Letenská` (string, required) - Street/city part
++ `streetNumber`: `22` (string, required) - Street number
++ `city`: `Prague` (string, required) - City
++ `zip`: `140 00` (string, required) - Postal code
++ `country`: `CZ` (string, required) - Customer's country, [ISO 3166-1 format, subtype ALPHA-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2). This means two letters in uppercase.
++ `flags` (array[AddressFlag], fixed-type,  required) - Types of the address.
+
+## AddressFlag(enum)
++ `PERMANENT` - Permanent residential address
++ `CONTACT` - Contact address
+
+## OriginationContext (object)
++ createdDate: `2018-01-16` (string, required) - Date the application has been created
+
+## FinancedSubjectAbstract (object)
++ type: `ORDER` (enum, required) - Type of financed subject
+    + `ORDER` - Client is financing purchase of goods.
+
+## FinancedSubjectMinimal (FinancedSubjectAbstract)
++ `order` (OrderMinimal, optional) - Information about the client's purchase of goods. REQUIRED for `ORDER` type of Financed subject
+
+## OrderMinimal (object)
++ number: `1234567890` (string, optional) - Identifier, specified by the partner (e-shop, POS shop)
++ totalPrice (Amount, required) - Total order amount, including VAT
++ downPayment (Amount, optional) - Down payment amount
++ variableSymbol: `1234567` (string,  optional) - Variable symbol (internal for partner) for reconciliation payment, if provided
+
+## Contract (object)
++ number: `4066554400` (string, required) - Unique identifier of contract
++ creditAmount (Amount, required) - Selected credit amount of product
++ productCode: `COCONL06` (string, required) - Product code
+
+## Service (object)
++ type: `INSURANCE` (enum, required) - Service type
+  + `INSURANCE`
++ insurance (Insurance, optional) - REQUIRED for `INSURANCE` type of service
+
+## Insurance (object)
++ code: `IN1` (string, required) - Maximal available credit amount
+
+## WorkflowStep (object)
++ code :`DELIVERY` (enum, required) - Workflow code
+    + `DELIVERY` - The application has been processed and the goods delivery process should be started
++ mandatory: `true` (boolean, required) - Workflow step may be optional (some additional services available for client) or required (scoring, contract signature etc.)
++ priority: `1` (string, required) - Identifier of workflow step's priority expressed as number (lowest number means highest priority)
+
+## Error (object)
++ code: `BAD_REQUEST` (string, required) - Unique internal error code
++ message: `Bad request` (string, required) - Human readable error description (non-localized)
++ severity (enum, required)
+    + `ERROR` - Critical error, execution cannot continue. This MUST be indicated also by appropriate HTTP status code
+    + `WARN` - Non-critical error, execution can continue but further user interaction is advisable. This MIGHT be indicated also by appropriate HTTP status code
+    + `INFO` - Information only, execution can continue without user interaction
++ attribute: `Client.addresses[1].streetNumber` (string, optional) - JSON path of request attribute that caused the error (if applicable)
++ ticketId: `UAT1:AMS:20160516-091658.450:45e4` (string, optional) - Internal ticket ID, used for error backtracking
+
+## Errors (object)
++ errors (array[Error], fixed-type, required) - Array with errors
+
+## OTPErrors (Errors)
++ blockedUntil: `2017-01-18T10:34:44+01:00` (string, optional) - requested operation is blocked until specified time
+
+## PagingInfo (object)
++ itemsPerPage: 10 (number, required) - number of items per page
++ nextPage: `transactions?sort=category&limit=10&after=30` (string, optional) - request to retrieve next page, if it exists and can be unambiguously specified
++ prevPage: `transactions?sort=category&limit=10&before=21` (string, optional) - request to retrieve previous page, if it exists and can be unambiguously specified
+
+
+## Amount (object)
++ `value`: 13300 (number, required) - Amount in minor units (13300 represents 133) [ISO 4217](https://en.wikipedia.org/wiki/ISO_4217)
++ `currency`: `CZK` (string, required) - Amount currency [ISO 4217](https://en.wikipedia.org/wiki/ISO_4217). Only local currency is allowed (CZK in Czech Republic and EUR in Slovakia).
+
+## VatAmount (object)
+Financial amount with VAT rate.
+
+### Properties
++ `value`: 14950 (number, required) - Amount in minor units (14950 represents 149,50) [ISO 4217](https://en.wikipedia.org/wiki/ISO_4217). MUST be 0 or greater.
++ `currency`: `CZK` (string, required) - Amount currency [ISO 4217](https://en.wikipedia.org/wiki/ISO_4217). Only local currency is allowed (CZK in Czech Republic and EUR in Slovakia).
++ `vatRate`: 15 (number, required) - VAT rate as natural number (15 represents 15% rate)
+
+## File (object)
++ `filename`: `iphone6s.jpg` (string, required) - File name.
++ One Of
+    + `url`: `https://i.cdn.nrholding.net/32523771/2000/2000/iphone6s.jpg` (string, required) - File URL (full).
+    + `content`: `RmlsZSBjb250ZW50cy4gwq9cXyjjg4QpXy/Crw==` (string, required) - File content (Base64 encoded, maximum size of encoded string is 500kB)
+
+
+## EmptyRE (object)
+
+## KeyValue (object)
++ `key`: `property` (string, required) - Key
++ `value`: `value` (string, required) - Value
+
+## BankAccount (object)
++ type (enum, required) - Account type
+    + `IBAN`
+    + `NATIONAL`
++ One Of
+    + iban (AccountIBAN, required) - Bank account number in IBAN format
+    + national (AccountNational, required) - Bank account number in national format.
+
+## AccountIBAN (object)
++ iban: `CZ6508000000192000145399` (string, required) - Account number in IBAN format
+
+## AccountNational (object)
++ prefix: `000000` (string, optional) - Account number prefix. For domestic accounts, this will be specified in national format.
++ accountNumber: `1235335010` (string, required) - Account number. For domestic accounts, this will be specified in national format.
++ bankCode: `3030` (string, required) - For domestic accounts, bank code in national format
+
+## PhoneNumber (object)
++ number: `+420123456789` (string, required) - Phone number (including country code)
+
+## Email (object)
++ address: `darth.vader@empire.sw` (string, required) - Email address
+
+
+## PartnerLogin (object)
+Partner login credentials
+
+### Properties
++ `username`: `eShop` (string, required) - Partner username
++ `password`: `eShopSecretPassword` (string, required) - Partner secret password
+
+## PartnerLoginResult (object)
+Authenticated partner access token
+
+### Properties
++ `accessToken`: `TokenForPartnerTokenForPartnerTokenForPartnerTokenForPartner` (string, required) - Access token
++ `expiresIn`: 7200 (number) - Token validity remaining time (in seconds)
+
+## AgentLoginRequest (object)
++ `clientId`: `MyCoolApplication` (string, required) - Id of consumer
++ `authorizations` (array[AgentLoginAuthorization], fixed-type, required) - Array of authorization request.
+
+## AgentLoginAuthorization (object)
++ `type` (enum, required) - Type of authorization requests
+    `CREDENTIALS` - Authorization with credentials
++ `credentials` (Credentials, required) - Data for `CREDENTIALS` type of authorization
+
+## Credentials (object)
++ `username`: `tester` (string, required) - Agent's username
++ `password`: `heslo123` (string, required) - Agent's password
+
+## AgentLoginResponse (object)
++ token (Token, required)
+
+## Token (object)
++ accessToken: `TokenForPartnerTokenForPartnerTokenForPartnerTokenForPartner` (string, required) - Access token
++ tokenType: `bearer` (string, required)
++ expiresIn: 43200 (number) - Token validity remaining time (in seconds)
+
+
+## AgentSetPasswordRequest (object)
++ `password`: `AgentSecretPassword` (string, required) - New password for agent
++ `authorizations` (array[AgentLoginAuthorization], fixed-type, required) - Array of authorization request
+
+## TokenCodeRequest (object)
++ `grant_type` (enum, required) - Grant flow type, only `authorization_code` and `refresh_token` is supported
+    + `authorization_code` - use to exchange code for access token
+    + `refresh_token` - can be used to get new access token instead of forcing user to login again
++ `client_id`: `my_app_id` (string, required) - `client_id` parameter of partner's application, received at application registration
++ `client_secret`: `my_app_secret` (string, required) - `client_secret` parameter of partner's application, received at application registration
++ One Of
+    + `code`: `12254a1124` (string, required) - Authorization code, received from authorization server
+    + `refresh_token`: `12254a1124` (string, required) - Refresh token, received from authorization server
+
+## TokenResponse (object)
++ `refresh_token`: `7dbadd74c434439db4fc9b2bbf8cabb3` (string, optional) - refresh token, if supported
++ `token_type`: `bearer` (string, required) - token type. Always "bearer".
++ `access_token`: `ccafe62cbce645ce95b2acce839f4acc` (string, required) - access token, to be included in API request
++ `expires_in`: 7200 (number, required) - access token validity, in seconds
+
+
+## AgentAccount (object)
++ name: `Jiří` (string, required) - User's first name.
++ lastName: `Novák` (string, required) - User's last name.
++ salesrooms (array[Salesroom], fixed-type, optional) - List of salesrooms for which user is registered.
+
+## Salesroom (object)
++ code: `007` (string, required) - Salesroom's code
++ name: `Testovací prodejna - Londýnské náměstí, Brno` (string, optional) - Salesroom's name
