@@ -284,7 +284,7 @@ Financing application base information
 ## Application (ApplicationBase)
 + applicationCustomer (ApplicationCustomerBase, optional) - Customer information
 + financedSubject (FinancedSubjectMinimal, required) - Subject of financing (for example Iphone purchase...)
-+ contract (Contract, optional) - Information about contract originating from this application
++ contract (Contract, optional) - Information about contract originating from this application. If no contract was created (for example existing contract was used for financing), attribute `contract` is not supplied.
 + originationContext (OriginationContext, required) - Additional information about context of application origination
 + services (array[Service], fixed-type, optional) - Additional services agreed for the application (for example insurance)
 
@@ -318,7 +318,7 @@ Financing application base information
 + `order` (OrderMinimal, optional) - Information about the client's purchase of goods. REQUIRED for `ORDER` type of Financed subject
 
 ## OrderMinimal (object)
-+ number: `1234567890` (string, optional) - Identifier, specified by the partner (e-shop, POS shop)
++ number: `1234567890` (string, optional) - Identifier, specified by the partner (e-shop, POS shop), if provided
 + totalPrice (Amount, required) - Total order amount, including VAT
 + downPayment (Amount, optional) - Down payment amount
 + variableSymbol: `1234567` (string,  optional) - Variable symbol (internal for partner) for reconciliation payment, if provided
@@ -335,7 +335,7 @@ Financing application base information
 + `installment` (Installment, optional) - Product details for installment type of financing.  REQUIRED for `INSTALLMENT` financing type
 
 ## Installment (object)
-+ productCode: `COCONL06` (string, optional) - Product code.
++ productCode: `COCONL06` (string, optional) - Product code of installment program.
 
 ## Service (object)
 + type: `INSURANCE` (enum, required) - Service type
@@ -348,7 +348,7 @@ Financing application base information
 ## WorkflowStep (object)
 + code :`DELIVERY` (enum, required) - Workflow code
     + `DELIVERY` - The application has been processed and the goods delivery process should be started
-    + `DELIVERED` - From the application process point of view the goods delivery process has been ended. Partner should have finalize the delivery process on his side too.
+    + `DELIVERED` - From the application process point of view the goods delivery process has been ended. Partner should finalize the delivery process on his side as soon as possible.
 + mandatory: `true` (boolean, required) - Workflow step may be optional (some additional services available for client) or required (scoring, contract signature etc.)
 + priority: `1` (string, required) - Identifier of workflow step's priority expressed as number (lowest number means highest priority)
 
