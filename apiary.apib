@@ -232,14 +232,13 @@ Partner authenticate himself and obtain acces token with this resource.
 # Group Application resources
 
 ## Application operations [/partner/v1/applications{?applicationId,contractNumber}]
-Partner may use resource `/partner/v1/applications` to check the state of partner's application and getting detailed information about it. Partner needs any identifier of application, either technical identifier of application (`applicationId` which is in the form of UUID), human readable identifier of application (`customerKey`) or identifier of contract (human readable `contractNumber`). In case partner is not sure which attribute to use (typically in face to face process with client who may not know which type of identifier he has), he should use `applicationKey` which searches through multiple attributes at once.
+Partner may use resource `/partner/v1/applications` to check the state of partner's application and getting detailed information about it. Partner needs any identifier of application, either technical identifier of application (`applicationId` which is in the form of UUID), identifier of contract (human readable `contractNumber`) or `applicationKey` through which the search is performed over multiple (human readable) attributes at once (it is typically used in face to face process with client who may not know which type of identifier he has).
 
 If the request was successfully processed, partner receives HTTP status code 200. If specified application was not found, empty data are returned.
 
 In other cases, partner receives one of the following errors:
   | Status code | Code                  | Explanation                                                                      |
   | ---         | ---                   | ---                                                                              |
-
   | 400         | INVALID_REQUEST       | Request was not well formatted (malformed request syntax, size too large, etc.)  |
   | 500         | INTERNAL_SERVER_ERROR | Unexpected condition was encountered and no more specific message is suitable    |
 
@@ -248,8 +247,7 @@ In other cases, partner receives one of the following errors:
 + Parameters
   + applicationId: `11200a0ee-adf54-dsa` (string, optional) - Primary identifier of the application.
   + contractNumber: `4106554400` (string, optional) - Identifier of the contract. Used when the partner does not have the application identifier.
-  + customerKey: `4566554400` (string, optional) - Human readable identifier of application, typically used in communication with clients.
-  + applicationKey: `4106554400` (string, optional) - Filter attribute to search through multiple (human readable) attributes at once. Actually it search using attributes `contractNumber`, `customerKey` and `orderNumber`. Searching with this attibute may take longer a may (in an extremely rare case) return more than one application.
+  + applicationKey: `4106554400` (string, optional) - Filter attribute through which the search is performed over multiple attributes at once. Attributes for contract number, application number (human readable attribute, not `applicationId`) or order number are used during the search. The use of this search attribute may cause a longer amount of time to complete the search and (in an extremely rare case) may return more than one application.
 
 + Request Valid (application/json;charset=UTF-8)
 
@@ -324,11 +322,20 @@ Financing application base information
 + totalPrice (Amount, required) - Total order amount, including VAT
 + downPayment (Amount, optional) - Down payment amount
 + variableSymbol: `1234567` (string,  optional) - Variable symbol (internal for partner) for reconciliation payment, if provided
++ financing (OrderFinancing, optional) - Information about form of financing `ORDER` type of application
 
 ## Contract (object)
 + number: `4066554400` (string, required) - Unique identifier of contract
 + creditAmount (Amount, required) - Selected credit amount of product
 + productCode: `COCONL06` (string, required) - Product code
+
+## OrderFinancing (object)
++ type: `INSTALLMENT` (enum, required) - Financing type
+  + `INSTALLMENT` - Pay in monthly installments ("nákup na splátky")
++ `installment` (Installment, optional) - Product details for installment type of financing.  REQUIRED for `INSTALLMENT` financing type
+
+## Installment (object)
++ productCode: `COCONL06` (string, optional) - Product code.
 
 ## Service (object)
 + type: `INSURANCE` (enum, required) - Service type
@@ -341,6 +348,7 @@ Financing application base information
 ## WorkflowStep (object)
 + code :`DELIVERY` (enum, required) - Workflow code
     + `DELIVERY` - The application has been processed and the goods delivery process should be started
+    + `DELIVERED` - From the application process point of view the goods delivery process has been ended. Partner should have finalize the delivery process on his side too.
 + mandatory: `true` (boolean, required) - Workflow step may be optional (some additional services available for client) or required (scoring, contract signature etc.)
 + priority: `1` (string, required) - Identifier of workflow step's priority expressed as number (lowest number means highest priority)
 
