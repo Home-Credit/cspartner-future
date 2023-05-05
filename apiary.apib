@@ -12,7 +12,7 @@ API documentation for Home Credit API for partners (next release documentation).
 | 1.1.1 | CS82    | 13.7.2021    | Initial version |
 
 ## Getting started
-This online document describes Home Credit (HC) API for partners - the means for partners through which they can get information about client contracts with Home Credit.
+This online document describes Home Credit (HC) API for partners - the means for partners through which they can get informations about client contracts with Home Credit.
 
 | Group of services                                           | Purpose                                                                                                                                                      |
 | ---                                                         | ---                                                                                                                                                          |
@@ -232,7 +232,7 @@ Partner authenticate himself and obtain acces token with this resource.
 # Group Application resources
 
 ## Application operations [/partner/v1/applications{?applicationId,contractNumber}]
-Partner may use resource `/partner/v1/applications` to check the state of partner's application and getting detailed information about it. Partner needs any identifier of application, either technical identifier of application (`applicationId` which is in the form of UUID), identifier of contract (human readable `contractNumber`) or `applicationKey` through which the search is performed over multiple (human readable) attributes at once (it is typically used in face to face process with client who may not know which type of identifier he has).
+Partner may use resource `/partner/v1/applications` to check the state of partner's application and getting detailed information about it. Partner needs any identifier of application, either technical identifier of application (`applicationId` which is in the form of UUID), identifier of contract (human readable `contractNumber`) or `applicationKey` through which the search is performed over multiple (human readable) identifiers at once (it is typically used in face to face process with client who may not know which type of identifier he has).
 
 If the request was successfully processed, partner receives HTTP status code 200. If specified application was not found, empty data are returned.
 
@@ -247,7 +247,7 @@ In other cases, partner receives one of the following errors:
 + Parameters
   + applicationId: `11200a0ee-adf54-dsa` (string, optional) - Primary identifier of the application.
   + contractNumber: `4106554400` (string, optional) - Identifier of the contract. Used when the partner does not have the application identifier.
-  + applicationKey: `4106554400` (string, optional) - Filter attribute through which the search is performed over multiple attributes at once. Attributes for contract number, application number (human readable attribute, not `applicationId`) or order number are used during the search. The use of this search attribute may cause a longer amount of time to complete the search and (in an extremely rare case) may return more than one application.
+  + applicationKey: `4106554400` (string, optional) - Filter attribute through which the search is performed over multiple identifiers at once. Identifiers for contract number, application number (human readable attribute, not `applicationId`) or order number are used during the search. The use of this search attribute may cause a longer amount of time to complete the search and (in an extremely rare case) may return more than one application.
 
 + Request Valid (application/json;charset=UTF-8)
 
@@ -283,7 +283,7 @@ Financing application base information
 ## Application (ApplicationBase)
 + applicationCustomer (ApplicationCustomerBase, optional) - Customer information
 + financedSubject (FinancedSubjectMinimal, required) - Subject of financing (for example Iphone purchase...)
-+ contract (Contract, optional) - Information about contract originating from this application. If no contract was created (for example existing contract was used for financing), attribute `contract` is not supplied.
++ contract (Contract, optional) - Information about contract originating from this application. If no contract was created (for example existing contract was used for financing), class `contract` is not supplied.
 + originationContext (OriginationContext, required) - Additional information about context of application origination
 + services (array[Service], fixed-type, optional) - Additional services agreed for the application (for example insurance)
 
