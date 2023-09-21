@@ -4,11 +4,12 @@ HOST: https://api.homecredit.cz
 # Home Credit - Partner API - Future version
 API documentation for Home Credit API for partners (next release documentation).
 
-> Version of documentation: `1.2.1` (11/2021)
+> Version of documentation: `1.2.2` (10/2023)
 
 | Version        | Release | Release date | News |
 | ---            | ---     | ---          | ---  |
-| 1.2.1 (11/2021) | CS86    | 8.11.2021    | New filter parameters for method [search application](#reference/application-resources/application-operations/search-application) |
+| 1.2.2 (10/2023) | CS110  | 24.10.2023   | New data in response of [search application](#reference/application-resources/application-operations/search-application) - details about who and where was contract created (`Salesroom`, `Salesman`, `Acquirer` in `OriginationContext` class) |
+| 1.2.1 (11/2021) | CS86   | 8.11.2021    | New filter parameters for method [search application](#reference/application-resources/application-operations/search-application) |
 | 1.1.1 | CS82    | 13.7.2021    | Initial version |
 
 ## Getting started
@@ -307,7 +308,28 @@ Financing application base information
 + `CONTACT` - Contact address
 
 ## OriginationContext (object)
-+ createdDate: `2018-01-16` (string, required) - Date the application has been created
++ `createdDate`: `2018-01-16` (string, required) - Date the application has been created
++ `salesroom` (SalesroomOriginationContext, required) 
++ `salesman` (Salesman, optional) - Data about the person who walked the client through the process of contract origination
++ `acquirer` (Acquirer, optional) - Data about the person who came into first contact with the client who needed financial services (if provided at the start of the process). May be different from salesman.
+
+## SalesroomOriginationContext (object)
++ `code`: `021574` (string, required) - Identifier of salesroom
++ `name`: `Naše prodejna, Uherské Hradiště` (string, required)
++ `type`: `PHYSICAL` (enum,required) - Type of salesroom
+    + `PHYSICAL`
+    + `ONLINE`
+    + `PHONE`
+
+## Salesman (object)
++ `firstName`: `Petr` (string, required)
++ `lastName`: `Novák` (string, required)
++ `partnerId`: `1485` (string, optional) - Unique identifier of partner's salesman in partner's system, filled into Home Credit database during the registration of a new salesman (if provided).
+
+## Acquirer (object)
++ `firstName`: `Jan` (string, optional)
++ `lastName`: `Novák` (string, optional)
++ `code`: `JN` (string, required) - Any string value filled in during the origination process.
 
 ## FinancedSubjectAbstract (object)
 + type: `ORDER` (enum, required) - Type of financed subject
