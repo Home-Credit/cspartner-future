@@ -758,7 +758,7 @@ components:
           type: string
           enum:
             - PHYSICAL
-            - ONLINE
+            - ONLINE_SHOP
             - PHONE
           description: Type of salesroom
     Salesman:
